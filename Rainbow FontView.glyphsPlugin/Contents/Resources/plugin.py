@@ -21,7 +21,7 @@ class RainbowFontView(GeneralPlugin):
 	# Set name of plugin
 	@objc.python_method
 	def settings(self):
-		self.name = "FontView LayerColor Filter"
+		self.name = "Rainbow FontView"
 		
 
 	# Add plugin in "File" Menu, and add callback.
@@ -102,11 +102,11 @@ class RainbowFontView(GeneralPlugin):
 
 			# If user is in FontView
 			if self.font.currentTab == None:
-				###print("We are in FontView")
+				print("We are in FontView")
 
 				# If Selected Master has been changed
 				if self.font.tempData['selectedMaster'] != self.font.selectedFontMaster.id:
-					###print("Master Changed")
+					print("Master Changed")
 					self.font.tempData['selectedMaster'] = self.font.selectedFontMaster.id
 
 					# Update Layer Color data and update "glyphOrder" custom parameter
@@ -120,11 +120,15 @@ class RainbowFontView(GeneralPlugin):
 						color = layer.color
 						glyphName = layer.parent.name
 						initValue = [key for key in colorLayerDic if glyphName in colorLayerDic[key]]
+						
+						print(f"Layer Color : {color}")
+						print(f"Previous Color : {initValue}")
+						print(colorLayerDic)
 						# If Selected Layer has a Layer Color
-						if color:
+						if color != None:
 							# If Layer Color not already in glyphOrder, update glyphOrder
 							if color not in colorLayerDic:
-								###print("New color added in FontView")
+								print("New color added in FontView")
 								self.GenerateLayerColorGlyphOrder()
 								self.font.customParameters["glyphOrder"] = self.code
 								break
@@ -133,13 +137,13 @@ class RainbowFontView(GeneralPlugin):
 
 							# If Layer Color has been modified, update glyphOrder
 							elif glyphName not in colorLayerDic[color]:
-								###print("Color Changed")
+								print("Color Changed")
 								self.GenerateLayerColorGlyphOrder()
 								self.font.customParameters["glyphOrder"] = self.code
 								break
 
-						if not color and initValue[0] != 13 :
-							###print("AIE")
+						if color == None and initValue[0] != 13 :
+							print("AIE")
 							self.GenerateLayerColorGlyphOrder()
 							self.font.customParameters["glyphOrder"] = self.code
 							break
@@ -186,6 +190,9 @@ class RainbowFontView(GeneralPlugin):
 		for color, glyph in self.colorLabels.items():
 			if str(color) in colorMeaning.keys():
 				self.code.append(f"**{colorMeaning[str(color)]}**")
+				self.code.extend(glyph)
+			else:
+				self.code.append(f"**No Color**")
 				self.code.extend(glyph)
 
 		# Update Layer Color Data in font.tempData
