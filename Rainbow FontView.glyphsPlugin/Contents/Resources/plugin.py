@@ -225,8 +225,8 @@ class RainbowFontView(GeneralPlugin):
 	@objc.python_method
 	def getKeyFile(self):
 		keyFile = None
-		if not os.path.exists(os.path.expanduser("~/Library/Application Support/Glyphs 3/info")):
-			os.makedirs(os.path.expanduser("~/Library/Application Support/Glyphs 3/info"))
+		if not f"{GSGlyphsInfo.applicationSupportPath()}/info":
+			os.makedirs(f"{GSGlyphsInfo.applicationSupportPath()}/info")
 		# Get colorNames.txt file next to Glyph file
 		try:
 			thisDirPath = os.path.dirname(self.windowController().document().font.filepath)
