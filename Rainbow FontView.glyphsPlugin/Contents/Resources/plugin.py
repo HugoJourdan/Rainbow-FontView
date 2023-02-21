@@ -236,7 +236,7 @@ class RainbowFontView(GeneralPlugin):
 			pass
 
 		# If 'info' folder missing, create it
-		if not f"{GSGlyphsInfo.applicationSupportPath()}/info":
+		if not os.path.exists(f"{GSGlyphsInfo.applicationSupportPath()}/info"):
 			os.makedirs(f"{GSGlyphsInfo.applicationSupportPath()}/info")
 
 		# If keyFile not next to source file
