@@ -240,7 +240,7 @@ class RainbowFontView(GeneralPlugin):
 
 		if not os.path.exists(keyFile):	
 			Message(f"If you want to customise Color Names,\n your settings file is here :\n\n ~/Library/Application Support/Glyphs 3/info/colorNames.txt\n\n", title='Settings file', OKButton=None)
-			with open("/Users/hugojourdan/Library/Application Support/Glyphs 3/info/colorNames.txt", 'w', encoding='utf8') as f:
+			with open(keyFile, 'w', encoding='utf8') as f:
 				config = "None=🫥 None\nred=🚨 Red\norange=🦊 Orange\nbrown=🪵 Brown\nyellow=🌼 Yellow\nlightGreen=🍀 Light green\ndarkGreen=🫑 Dark green\nlightBlue=💎 Light blue\ndarkBlue=🌀 Dark blue\npurple=🔮 Purple\nmagenta=🌺 Magenta\nlightGray=🏐 Light Gray\ncharcoal=🎱 Charcoal"
 				f.write(config)
 		else:
