@@ -225,8 +225,7 @@ class RainbowFontView(GeneralPlugin):
 	@objc.python_method
 	def getKeyFile(self):
 		keyFile = None
-		if not f"{GSGlyphsInfo.applicationSupportPath()}/info":
-			os.makedirs(f"{GSGlyphsInfo.applicationSupportPath()}/info")
+		
 		# Get colorNames.txt file next to Glyph file
 		try:
 			thisDirPath = os.path.dirname(self.windowController().document().font.filepath)
@@ -236,13 +235,19 @@ class RainbowFontView(GeneralPlugin):
 		except:
 			pass
 
-		keyFile = f"{GSGlyphsInfo.applicationSupportPath()}/info/colorNames.txt"
+		# If 'info' folder missing, create it
+		if not f"{GSGlyphsInfo.applicationSupportPath()}/info":
+			os.makedirs(f"{GSGlyphsInfo.applicationSupportPath()}/info")
 
-		if not os.path.exists(keyFile):	
-			Message(f"If you want to customise Color Names,\n your settings file is here :\n\n ~/Library/Application Support/Glyphs 3/info/colorNames.txt\n\n", title='Settings file', OKButton=None)
-			with open(keyFile, 'w', encoding='utf8') as f:
-				config = "None=🫥 None\nred=🚨 Red\norange=🦊 Orange\nbrown=🪵 Brown\nyellow=🌼 Yellow\nlightGreen=🍀 Light green\ndarkGreen=🫑 Dark green\nlightBlue=💎 Light blue\ndarkBlue=🌀 Dark blue\npurple=🔮 Purple\nmagenta=🌺 Magenta\nlightGray=🏐 Light Gray\ncharcoal=🎱 Charcoal"
-				f.write(config)
+		# If keyFile not next to source file
+		if not keyFile:
+			keyFile = f"{GSGlyphsInfo.applicationSupportPath()}/info/colorNames.txt"
+
+			if not os.path.exists(keyFile):	
+				Message(f"If you want to customise Color Names,\n your settings file is here :\n\n ~/Library/Application Support/Glyphs 3/info/colorNames.txt\n\n", title='Settings file', OKButton=None)
+				with open(keyFile, 'w', encoding='utf8') as f:
+					config = "None=🫥 None\nred=🚨 Red\norange=🦊 Orange\nbrown=🪵 Brown\nyellow=🌼 Yellow\nlightGreen=🍀 Light green\ndarkGreen=🫑 Dark green\nlightBlue=💎 Light blue\ndarkBlue=🌀 Dark blue\npurple=🔮 Purple\nmagenta=🌺 Magenta\nlightGray=🏐 Light Gray\ncharcoal=🎱 Charcoal"
+					f.write(config)
 		else:
 			pass
 		return keyFile
