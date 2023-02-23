@@ -16,6 +16,8 @@ import objc
 import re
 import os
 import codecs
+from collections import OrderedDict
+
 from GlyphsApp import *
 from GlyphsApp.plugins import *
 
@@ -49,14 +51,20 @@ class RainbowFontView(GeneralPlugin):
 		if not self.font.userData["hugojourdan.RainbowFontView.labelUsed"]:
 			self.font.userData["hugojourdan.RainbowFontView.labelUsed"] = "Layer"
 
-		checkLayerColor = {}
+		# Warning message
+		color_set = set()
+		label_used = self.font.userData["hugojourdan.RainbowFontView.labelUsed"]
 		for glyph in self.font.glyphs:
-			color = glyph.layers[masterID].color
-			checkLayerColor[color]=''
-		if len(checkLayerColor) == 1 and checkLayerColor[None]=="":
-			labelUsed = self.font.userData["hugojourdan.RainbowFontView.labelUsed"]
-			Message(f"It seems you didn't set\n{labelUsed} Color for Selected Master\nTo set a Layer Color press :\n[Right Click + Option]", title='No Layer Color Set', OKButton=None)
-
+			if label_used =="Layer":
+				color_set.add(glyph.layers[masterID].color)
+			else:
+				color_set.add(glyph.color)
+		if len(color_set) == 1 and None in color_set:
+			if label_used =="Layer":
+				message = f"It seems you didn't set\nLayer Color for Selected Master\nTo set a Layer Color press :\n[Right Click + Option]"
+			else:
+				message = f"It seems you didn't set\nGlyph Color in your project\nTo set a Glyph Color press :\n[Right Click]"
+			Message(message, title=f'No {label_used} Color Set', OKButton=None)
 		
 
 		# Because this plugin need a "glyphOrder" custom parameter to work, if it's missing, add one empty.
@@ -68,10 +76,9 @@ class RainbowFontView(GeneralPlugin):
 			Glyphs.font.tempData['filterEnable'] = False
 
 			# Temp solution to enable/disable custom parameter
-			i = -1
-			for cp in Glyphs.font.customParameters:
-				i += 1
+			for i, cp in enumerate(Glyphs.font.customParameters):
 				if cp.name == "glyphOrder":
+					cp.setActive_(False)
 					break
 			Glyphs.font.customParameters[i].setActive_(False)
 			#Message("FontView Layer Color Filter ❌", title='Alert', OKButton=None)
@@ -81,15 +88,13 @@ class RainbowFontView(GeneralPlugin):
 			Glyphs.font.tempData['filterEnable'] = True
 
 			# Update glyphOrder
-			self.GenerateLayerColorGlyphOrder()
-			Glyphs.font.customParameters["glyphOrder"] = self.code
+			self.UpdateGlyphOrder()
+			#Glyphs.font.customParameters["glyphOrder"] = self.code
 
 			# Temp solution to eable/disable custom parameter
-			
-			i = -1
-			for cp in Glyphs.font.customParameters:
-				i += 1
+			for i, cp in enumerate(Glyphs.font.customParameters):
 				if cp.name == "glyphOrder":
+					cp.setActive_(False)
 					break
 			Glyphs.font.customParameters[i].setActive_(True)
 			#Message("FontView Layer Color Filter ✅", title='Alert', OKButton=None)
@@ -108,8 +113,8 @@ class RainbowFontView(GeneralPlugin):
 
 			# If no data related to Layer Color saved, save Color Layer data of Selected Master
 			if not self.font.tempData['saveColorLayers']:
-				self.GenerateLayerColorGlyphOrder()
-				self.font.tempData['saveColorLayers'] = self.colorLabels	
+				self.UpdateGlyphOrder()
+				
 
 			# If user is in FontView
 			if self.font.currentTab == None:
@@ -117,95 +122,61 @@ class RainbowFontView(GeneralPlugin):
 
 				# If Selected Master has been changed
 				if self.font.tempData['selectedMaster'] != self.font.selectedFontMaster.id:
-					###print("Master Changed")
 					self.font.tempData['selectedMaster'] = self.font.selectedFontMaster.id
 
 					# Update Layer Color data and update "glyphOrder" custom parameter
-					self.GenerateLayerColorGlyphOrder()
-					self.font.customParameters["glyphOrder"] = self.code
+					self.UpdateGlyphOrder()
+					#self.font.customParameters["glyphOrder"] = self.code
 
 				# If Selected Master has not been changed, but a layer is selecyed
 				elif self.font.selectedLayers:
 					colorLayerDic = self.font.tempData['saveColorLayers']
+					glyphs_to_update = set()
+					label_used = self.font.userData["hugojourdan.RainbowFontView.labelUsed"]
 					for layer in self.font.selectedLayers:
-						
-						if self.font.userData["hugojourdan.RainbowFontView.labelUsed"] == "Glyph":
+						if label_used == "Glyph":
 							color = layer.parent.color
 						else:
 							color = layer.color
-
-						glyphName = layer.parent.name
-						initValue = [key for key in colorLayerDic if glyphName in colorLayerDic[key]]
-						
-						###print(f"Layer Color : {color}")
-						###print(f"Previous Color : {initValue}")
-						###print(colorLayerDic)
-						# If Selected Layer has a Layer Color
-						if color != None:
-							# If Layer Color not already in glyphOrder, update glyphOrder
+						glyph_name = layer.parent.name
+						if color is not None:
 							if color not in colorLayerDic:
-								###print("New color added in FontView")
-								self.GenerateLayerColorGlyphOrder()
-								self.font.customParameters["glyphOrder"] = self.code
-								break
-    
-						
-
-							# If Layer Color has been modified, update glyphOrder
-							elif glyphName not in colorLayerDic[color]:
-								###print("Color Changed")
-								self.GenerateLayerColorGlyphOrder()
-								self.font.customParameters["glyphOrder"] = self.code
-								break
-
-						if color == None and initValue[0] != 13 :
-							###print("AIE")
-							self.GenerateLayerColorGlyphOrder()
-							self.font.customParameters["glyphOrder"] = self.code
-							break
-						
-
-
+								glyphs_to_update.add(glyph_name)
+							elif glyph_name not in colorLayerDic[color]:
+								glyphs_to_update.add(glyph_name)
+						elif glyph_name not in colorLayerDic.get(13, []):
+							glyphs_to_update.add(glyph_name)
+					if glyphs_to_update:
+						self.UpdateGlyphOrder()
+						#self.font.customParameters["glyphOrder"] = self.code
 
 
 	# Return :
 	# self.code 	    -> List object with code to be insert in glyphOrder
 	# self.colorLabels  -> Dic object with Color Label Data of Selected Master
 	@objc.python_method
-	def GenerateLayerColorGlyphOrder(self):
-		
-		#print(colorMeaning)
-		#colorMeaning = {'0': '🚨 Red', '1': '🦊 Orange', '2': '🪵 Brown', '3': '🌼 Yellow', '4': '🍀 Light green', '5': '🫑 Dark green', '6': '💎 Light blue', '7': '🌀 Dark blue', '8': '🔮 Purple', '9': '🌺 Magenta', '10': '🏐 Light Gray', '11': '🎱 Charcoal'}
-
-		masterID = self.font.selectedFontMaster.id
+	def UpdateGlyphOrder(self):
 
 		# Temp solution to eable/disable custom parameter
-		i = -1
-		for cp in self.font.customParameters:
-			i += 1
-			if cp.name == "glyphOrder":
-				break
-		self.font.customParameters[i].setActive_(False)
+		for i, cp in enumerate(Glyphs.font.customParameters):
+				if cp.name == "glyphOrder":
+					cp.setActive_(False)
+					break
+		Glyphs.font.customParameters[i].setActive_(False)
 
 		self.colorLabels = {}
+		labelUsed = self.font.userData["hugojourdan.RainbowFontView.labelUsed"]
+		masterID = self.font.selectedFontMaster.id
 		for glyph in self.font.glyphs:
-			if self.font.userData["hugojourdan.RainbowFontView.labelUsed"] == "Glyph":
+			if labelUsed == "Glyph":
 				color = glyph.color
 			else:
 				color = glyph.layers[masterID].color
-			if color not in self.colorLabels:
-				self.colorLabels[color] = []
+			self.colorLabels.setdefault(color, [])
 			self.colorLabels[color].append(glyph.name)
 
-
-		if None in self.colorLabels:
-			self.colorLabels[13] = self.colorLabels.pop(None)
-
-		myKeys = list(self.colorLabels.keys())
-		myKeys.sort()
-		self.colorLabels = {i: self.colorLabels[i] for i in myKeys}
-		# if 13 in self.colorLabels:
-		# 	self.colorLabels["Not set"] = self.colorLabels.pop(13)
+		self.colorLabels[13] = self.colorLabels.pop(None, [])
+		self.colorLabels = OrderedDict(sorted(self.colorLabels.items()))
 
 		self.code = ["#Color Layer Filter:"]
 		for color, glyph in self.colorLabels.items():
@@ -220,12 +191,15 @@ class RainbowFontView(GeneralPlugin):
 		self.font.tempData['saveColorLayers'] = self.colorLabels
 		self.font.customParameters[i].setActive_(True)
 
+		self.font.customParameters["glyphOrder"] = self.code
+
 		return self.code, self.colorLabels
 
 	@objc.python_method
 	def getKeyFile(self):
 		keyFile = None
-		
+		if not f"{GSGlyphsInfo.applicationSupportPath()}/info":
+			os.makedirs(f"{GSGlyphsInfo.applicationSupportPath()}/info")
 		# Get colorNames.txt file next to Glyph file
 		try:
 			thisDirPath = os.path.dirname(self.windowController().document().font.filepath)
@@ -235,19 +209,13 @@ class RainbowFontView(GeneralPlugin):
 		except:
 			pass
 
-		# If 'info' folder missing, create it
-		if not os.path.exists(f"{GSGlyphsInfo.applicationSupportPath()}/info"):
-			os.makedirs(f"{GSGlyphsInfo.applicationSupportPath()}/info")
+		keyFile = f"{GSGlyphsInfo.applicationSupportPath()}/info/colorNames.txt"
 
-		# If keyFile not next to source file
-		if not keyFile:
-			keyFile = f"{GSGlyphsInfo.applicationSupportPath()}/info/colorNames.txt"
-
-			if not os.path.exists(keyFile):	
-				Message(f"If you want to customise Color Names,\n your settings file is here :\n\n ~/Library/Application Support/Glyphs 3/info/colorNames.txt\n\n", title='Settings file', OKButton=None)
-				with open(keyFile, 'w', encoding='utf8') as f:
-					config = "None=🫥 None\nred=🚨 Red\norange=🦊 Orange\nbrown=🪵 Brown\nyellow=🌼 Yellow\nlightGreen=🍀 Light green\ndarkGreen=🫑 Dark green\nlightBlue=💎 Light blue\ndarkBlue=🌀 Dark blue\npurple=🔮 Purple\nmagenta=🌺 Magenta\nlightGray=🏐 Light Gray\ncharcoal=🎱 Charcoal"
-					f.write(config)
+		if not os.path.exists(keyFile):	
+			Message(f"If you want to customise Color Names,\n your settings file is here :\n\n ~/Library/Application Support/Glyphs 3/info/colorNames.txt\n\n", title='Settings file', OKButton=None)
+			with open(keyFile, 'w', encoding='utf8') as f:
+				config = "None=🫥 None\nred=🚨 Red\norange=🦊 Orange\nbrown=🪵 Brown\nyellow=🌼 Yellow\nlightGreen=🍀 Light green\ndarkGreen=🫑 Dark green\nlightBlue=💎 Light blue\ndarkBlue=🌀 Dark blue\npurple=🔮 Purple\nmagenta=🌺 Magenta\nlightGray=🏐 Light Gray\ncharcoal=🎱 Charcoal"
+				f.write(config)
 		else:
 			pass
 		return keyFile
@@ -272,12 +240,14 @@ class RainbowFontView(GeneralPlugin):
 			with codecs.open(keyFile, "r", "utf-8") as file:
 				for line in file:
 					if "None" in line: continue
-					
-					colour = re.match(r".*?(?=\=)", line).group(0)
-					label = re.search(r"(?<=\=).*", line).group(0)
-					colourLabels[colorKeys[colour]] = label
-					order.append(colour)
-		#print "__colourLabels:", colourLabels, order
+					parts = line.strip().split('=')
+					if len(parts) != 2: continue
+					colour, label = parts
+					colour = colour.strip()
+					label = label.strip()
+					if not colour: continue
+					colourLabels[colorKeys.get(colour)] = label
+					order.append(colorKeys.get(colour))
 		return colourLabels, order
 
 	@objc.python_method
