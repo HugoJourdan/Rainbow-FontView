@@ -66,7 +66,6 @@ class RainbowFontView(GeneralPlugin):
 				message = f"It seems you didn't set\nGlyph Color in your project\nTo set a Glyph Color press :\n[Right Click]"
 			Message(message, title=f'No {label_used} Color Set', OKButton=None)
 		
-
 		# Because this plugin need a "glyphOrder" custom parameter to work, if it's missing, add one empty.
 		if not Glyphs.font.customParameters["glyphOrder"]:
 			Glyphs.font.customParameters["glyphOrder"] = ()
@@ -81,7 +80,6 @@ class RainbowFontView(GeneralPlugin):
 					cp.setActive_(False)
 					break
 			Glyphs.font.customParameters[i].setActive_(False)
-			#Message("FontView Layer Color Filter ❌", title='Alert', OKButton=None)
 
 		# If Filter is disable, enable it
 		else :
@@ -198,8 +196,12 @@ class RainbowFontView(GeneralPlugin):
 	@objc.python_method
 	def getKeyFile(self):
 		keyFile = None
-		if not f"{GSGlyphsInfo.applicationSupportPath()}/info":
-			os.makedirs(f"{GSGlyphsInfo.applicationSupportPath()}/info")
+
+		# Create info folder if missing
+		infoFolder = f"{GSGlyphsInfo.applicationSupportPath()}/info"
+		if not os.path.exists(infoFolder):
+			os.makedirs(infoFolder)
+
 		# Get colorNames.txt file next to Glyph file
 		try:
 			thisDirPath = os.path.dirname(self.windowController().document().font.filepath)
@@ -207,9 +209,7 @@ class RainbowFontView(GeneralPlugin):
 			if os.path.exists(localKeyFile):
 				keyFile = localKeyFile
 		except:
-			pass
-
-		keyFile = f"{GSGlyphsInfo.applicationSupportPath()}/info/colorNames.txt"
+			keyFile = f"{GSGlyphsInfo.applicationSupportPath()}/info/colorNames.txt"
 
 		if not os.path.exists(keyFile):	
 			Message(f"If you want to customise Color Names,\n your settings file is here :\n\n ~/Library/Application Support/Glyphs 3/info/colorNames.txt\n\n", title='Settings file', OKButton=None)
